@@ -539,6 +539,17 @@ describe("herdr launcher", () => {
       expect(opencodeShowsSubmittedPrompt(deliveredPane, "   ")).toBe(false);
     });
 
+    it("matches a submitted prompt that itself contains the › glyph", () => {
+      const task = "Replace › with / in the breadcrumb separator, then › update the snapshot.";
+      const pane = ["▪ oc mini v2.2.6 · ~/code/repo", "", `› ${task}`, "", "Done.", "", "┃"].join(
+        "\n",
+      );
+      expect(opencodeShowsSubmittedPrompt(pane, task)).toBe(true);
+      expect(opencodeShowsSubmittedPrompt(`› › ${task}`, `› ${task}`)).toBe(true);
+      // A glyph mid-line in other output is not a submission marker.
+      expect(opencodeShowsSubmittedPrompt(`Home › ${task}`, task)).toBe(false);
+    });
+
     it("treats a stalled OpenCode prompt as launched when the pane shows it submitted", async () => {
       const calls: string[][] = [];
       const result = await launchRoutedAgent({

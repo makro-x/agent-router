@@ -60,7 +60,8 @@ const HANDOFF_TIMEOUT_MS = 30_000;
 // and the agent is often idle again (turn finished) before any later wait. OpenCode echoes
 // each submitted prompt into its transcript as a line starting with "›" (an unsent draft sits
 // in the input box after "┃" instead), so that echo is the delivery signal for OpenCode.
-const OPENCODE_SUBMITTED_MARK = "›";
+// Only a "›" at the start of a line marks a submission; one inside the prompt text is content.
+const OPENCODE_SUBMITTED_LINE = /^[ \t]*›/gm;
 const DELIVERY_PROBE_CHARS = 48;
 const DELIVERY_READ_LINES = 400;
 
@@ -71,12 +72,13 @@ export function opencodeShowsSubmittedPrompt(paneText: string, handoff: string):
   if (!probe) {
     return false;
   }
-  return paneText.split(OPENCODE_SUBMITTED_MARK).some((part, index) => {
-    if (index === 0) {
-      return false;
+  for (const mark of paneText.matchAll(OPENCODE_SUBMITTED_LINE)) {
+    const echoed = paneText.slice(mark.index + mark[0].length).replace(/\s+/g, "");
+    if (echoed.startsWith(probe)) {
+      return true;
     }
-    return part.replace(/\s+/g, "").startsWith(probe);
-  });
+  }
+  return false;
 }
 
 export interface LaunchResult {
