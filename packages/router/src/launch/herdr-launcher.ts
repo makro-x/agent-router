@@ -55,6 +55,9 @@ export function herdrAgentName(agent: AgentId, launchToken: string): string {
 }
 
 const HANDOFF_TIMEOUT_MS = 30_000;
+// A fresh pane's login shell can take several seconds (heavy shell profiles, a loaded machine).
+const PANE_BUSY_RETRIES = 10;
+const PANE_BUSY_RETRY_MS = 1_000;
 
 // Herdr never reports `opencode mini` as working, so a delivered prompt always looks stalled
 // and the agent is often idle again (turn finished) before any later wait. OpenCode echoes
@@ -103,6 +106,8 @@ export async function launchRoutedAgent(input: {
   herdr?: HerdrClient;
   /** Working directory for a new pane; omitted, Herdr uses the current pane's directory. */
   cwd?: string;
+  /** Test seam for the pane-busy retry delay. */
+  sleep?: (ms: number) => Promise<void>;
 }): Promise<LaunchResult> {
   if (!isHerdrEnv(input.env) && !input.dryRun) {
     return { ok: false, error: "HERDR_ENV=1 is required to launch a pane" };
@@ -144,13 +149,29 @@ export async function launchRoutedAgent(input: {
     paneCreated = true;
   }
   if (!input.existingPaneId) {
-    const started = await herdr.startAgent({
-      name: agentName,
-      kind: herdrAgentKind(input.agent),
-      paneId,
-      // Herdr runs the kind's own executable; pass only its native arguments after `--`.
-      agentArgs: command.slice(1),
-    });
+    const start = () =>
+      herdr.startAgent({
+        name: agentName,
+        kind: herdrAgentKind(input.agent),
+        paneId: paneId as string,
+        // Herdr runs the kind's own executable; pass only its native arguments after `--`.
+        agentArgs: command.slice(1),
+      });
+    let started = await start();
+    // A pane that was just split may still be starting its shell, and Herdr refuses to start
+    // an agent there with agent_pane_busy. Only for a pane we created: retry while it settles.
+    const sleep = input.sleep ?? ((ms: number) => new Promise((r) => setTimeout(r, ms)));
+    for (
+      let attempt = 0;
+      paneCreated &&
+      !started.ok &&
+      attempt < PANE_BUSY_RETRIES &&
+      `${started.stdout}${started.stderr}`.includes("agent_pane_busy");
+      attempt += 1
+    ) {
+      await sleep(PANE_BUSY_RETRY_MS);
+      started = await start();
+    }
     if (!started.ok) {
       const error = herdrError(started, "herdr agent start failed");
       if (paneCreated) {

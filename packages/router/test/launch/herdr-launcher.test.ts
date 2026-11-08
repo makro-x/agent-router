@@ -138,7 +138,14 @@ describe("herdr launcher", () => {
       launchName: "gpt-5.6-terra",
       effort: "low" as const,
       kind: "codex",
-      args: ["--model", "gpt-5.6-terra", "-c", 'model_reasoning_effort="low"'],
+      args: [
+        "--model",
+        "gpt-5.6-terra",
+        "-c",
+        "check_for_update_on_startup=false",
+        "-c",
+        'model_reasoning_effort="low"',
+      ],
     },
     {
       agent: "claude-code" as const,
@@ -611,6 +618,108 @@ describe("herdr launcher", () => {
       });
       expect(result.ok).toBe(false);
       expect(calls.some((argv) => argv[1] === "pane" && argv[2] === "read")).toBe(false);
+    });
+  });
+  describe("fresh pane not yet a shell", () => {
+    const busy = {
+      ok: false,
+      code: 1,
+      stdout: "",
+      stderr: JSON.stringify({
+        error: {
+          code: "agent_pane_busy",
+          message: "agent target pane w1:p9 is not an available shell",
+        },
+      }),
+    };
+
+    it("retries agent start on a pane it just split until the shell is ready", async () => {
+      const calls: string[][] = [];
+      const sleeps: number[] = [];
+      let starts = 0;
+      const herdr = createHerdrClient(async (argv) => {
+        calls.push([...argv]);
+        if (argv[2] === "start") {
+          starts += 1;
+          if (starts <= 2) {
+            return busy;
+          }
+        }
+        return { ok: true, code: 0, stdout: "w1:p9\n", stderr: "" };
+      });
+      const result = await launchRoutedAgent({
+        env: { HERDR_ENV: "1" },
+        agent: "claude-code",
+        launchName: "sonnet",
+        effort: "low",
+        handoff: "task",
+        dryRun: false,
+        herdr,
+        sleep: async (ms) => {
+          sleeps.push(ms);
+        },
+      });
+      expect(result.ok).toBe(true);
+      expect(starts).toBe(3);
+      expect(sleeps).toEqual([1000, 1000]);
+      expect(calls.some((argv) => argv[2] === "close")).toBe(false);
+    });
+
+    it("gives up after the retries and closes the pane it created", async () => {
+      const calls: string[][] = [];
+      let starts = 0;
+      const herdr = createHerdrClient(async (argv) => {
+        calls.push([...argv]);
+        if (argv[2] === "start") {
+          starts += 1;
+          return busy;
+        }
+        return { ok: true, code: 0, stdout: "w1:p9\n", stderr: "" };
+      });
+      const result = await launchRoutedAgent({
+        env: { HERDR_ENV: "1" },
+        agent: "codex",
+        launchName: "gpt-6-luna",
+        effort: "low",
+        handoff: "task",
+        dryRun: false,
+        herdr,
+        sleep: async () => {},
+      });
+      expect(result.ok).toBe(false);
+      expect(result.error).toMatch(/agent_pane_busy/);
+      expect(starts).toBe(11);
+      expect(calls).toContainEqual(["herdr", "pane", "close", "w1:p9"]);
+    });
+
+    it("does not retry other start errors", async () => {
+      let starts = 0;
+      const herdr = createHerdrClient(async (argv) => {
+        if (argv[2] === "start") {
+          starts += 1;
+          return {
+            ok: false,
+            code: 1,
+            stdout: "",
+            stderr: JSON.stringify({ error: { code: "agent_start_failed", message: "boom" } }),
+          };
+        }
+        return { ok: true, code: 0, stdout: "w1:p9\n", stderr: "" };
+      });
+      const result = await launchRoutedAgent({
+        env: { HERDR_ENV: "1" },
+        agent: "codex",
+        launchName: "gpt-6-luna",
+        effort: "low",
+        handoff: "task",
+        dryRun: false,
+        herdr,
+        sleep: async () => {
+          throw new Error("must not sleep");
+        },
+      });
+      expect(result.ok).toBe(false);
+      expect(starts).toBe(1);
     });
   });
 });
