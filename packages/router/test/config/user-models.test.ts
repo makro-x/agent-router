@@ -96,7 +96,7 @@ describe("user-declared models", () => {
         launchName: "opencode-go/kimi-k3.1-pro",
         effort: "none",
       }),
-    ).toEqual(["opencode", "--model", "opencode-go/kimi-k3.1-pro"]);
+    ).toEqual(["opencode", "mini", "--model", "opencode-go/kimi-k3.1-pro"]);
   });
 });
 
@@ -167,7 +167,7 @@ describe("OpenCode Go quota", () => {
       },
     );
     expect(result.code).toBe(0);
-    expect(result.output).toMatch(/opencode --model opencode-go\/kimi-k3\.1-pro/);
+    expect(result.output).toMatch(/opencode mini --model opencode-go\/kimi-k3\.1-pro/);
     expect(result.output).toMatch(/unknown \(no collector returned usage\)/);
   });
 });

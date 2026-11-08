@@ -101,7 +101,8 @@ OpenCode Go models are data, not code: an `opencode` account plus a user model w
 }
 ```
 
-- The router starts it as `opencode --model opencode-go/kimi-k3.1-pro`. Log in to OpenCode Go
+- The router starts it as `opencode mini --model opencode-go/kimi-k3.1-pro` (OpenCode 2.x
+  accepts `--model` only on `mini`, not the root TUI). Log in to OpenCode Go
   with `opencode auth login` first; the router stores no OpenCode credential.
 - `supportedEfforts` is `["none"]` because the OpenCode TUI has no effort flag.
 - `capabilities`, `relativeQuotaCost` and `relativeLatency` are estimates; adjust them.

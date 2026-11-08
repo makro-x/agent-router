@@ -40,6 +40,8 @@ export function buildAgentCommand(input: {
       return args;
     }
     case "opencode":
-      return ["opencode", "--model", input.launchName];
+      // OpenCode 2.x dropped `--model` from the root TUI ("Unrecognized flag: --model");
+      // `opencode mini` is the interactive interface that still takes it.
+      return ["opencode", "mini", "--model", input.launchName];
   }
 }

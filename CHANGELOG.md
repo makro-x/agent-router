@@ -17,6 +17,11 @@ and released under a single tag.
   built-in ID or a duplicate ID is an error; `router accounts` reports it and warns about
   enabled model IDs that nothing defines. Example: `docs/examples/opencode-go.config.json`.
 
+### Fixed
+
+- OpenCode panes start with `opencode mini --model <provider/model>`. OpenCode 2.x rejects
+  `--model` on the root TUI (`Unrecognized flag: --model`), so every OpenCode launch failed.
+
 - Live effort switching for Opus 5.5 and GPT 6 Astra, opt-in with `liveEffort.enabled`.
   `router run --session <id>` continues the next phase in the previous pane when TypeSafe
   picks the same account and model, changing the effort in place instead of opening a new

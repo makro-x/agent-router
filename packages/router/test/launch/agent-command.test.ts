@@ -53,6 +53,6 @@ describe("agent commands", () => {
   it("starts OpenCode with --model in provider/model form", () => {
     expect(
       buildAgentCommand({ agent: "opencode", launchName: "openai/gpt", effort: "low" }),
-    ).toEqual(["opencode", "--model", "openai/gpt"]);
+    ).toEqual(["opencode", "mini", "--model", "openai/gpt"]);
   });
 });

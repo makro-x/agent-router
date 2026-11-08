@@ -169,7 +169,7 @@ plugin checkout; see "Example: OpenCode Go" in `docs/configuration.md`.
 | `openai:gpt-5.6-terra`    | Codex       | `codex --model gpt-5.6-terra …`                                  | low, medium, high, ultra             |            |
 | `openai:gpt-5.6-luna`     | Codex       | `codex --model gpt-5.6-luna …`                                   | low, medium, high                    |            |
 | `openai:gpt-5.5`          | Codex       | `codex --model gpt-5.5 …`                                        | low, medium, high                    |            |
-| `openai:opencode`         | OpenCode    | `opencode --model openai`                                        | low, medium, high                    |            |
+| `openai:opencode`         | OpenCode    | `opencode mini --model openai`                                   | low, medium, high                    |            |
 
 TypeSafe picks the effort from the model's list. `max` and `ultra` are only offered when the
 task you started the chain with (`router run` without `--session`) contains the word

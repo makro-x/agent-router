@@ -156,7 +156,7 @@ describe("herdr launcher", () => {
       launchName: "openai",
       effort: "low" as const,
       kind: "opencode",
-      args: ["--model", "openai"],
+      args: ["mini", "--model", "openai"],
     },
   ])(
     "passes only native $agent arguments to herdr agent start",
