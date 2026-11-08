@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { createHerdrClient } from "../../src/launch/herdr-client.js";
-import { launchRoutedAgent } from "../../src/launch/herdr-launcher.js";
+import {
+  launchRoutedAgent,
+  opencodeShowsSubmittedPrompt,
+} from "../../src/launch/herdr-launcher.js";
 import { buildHandoff, serializeHandoff } from "../../src/handoff/handoff-builder.js";
 
 describe("herdr launcher", () => {
@@ -156,7 +159,7 @@ describe("herdr launcher", () => {
       launchName: "openai",
       effort: "low" as const,
       kind: "opencode",
-      args: ["--model", "openai"],
+      args: ["mini", "--model", "openai"],
     },
   ])(
     "passes only native $agent arguments to herdr agent start",
@@ -478,5 +481,136 @@ describe("herdr launcher", () => {
     expect(calls).toContainEqual(["herdr", "pane", "close", "w1:p9"]);
     expect(result.paneId).toBeUndefined();
     expect(calls.some((argv) => argv[2] === "prompt")).toBe(false);
+  });
+  describe("OpenCode prompt delivery", () => {
+    const handoff =
+      "Routed task: bump the setup-node action to v7 in .github/workflows/ci.yml and run the tests.";
+    // What `herdr pane read` shows after `opencode mini` took the prompt and finished its turn.
+    const deliveredPane = [
+      "▪ oc mini v2.2.6 · ~/code/repo",
+      "",
+      "› Routed task: bump the setup-node action to v7 in",
+      "  .github/workflows/ci.yml and run the tests.",
+      "",
+      "Done.",
+      "",
+      "Build · Kimi K3.1 Pro · 4.1s",
+      "",
+      "┃",
+    ].join("\n");
+    const draftPane = ["▪ oc mini v2.2.6 · ~/code/repo", "", `┃ ${handoff}`].join("\n");
+
+    function stalledHerdr(pane: string, calls: string[][]) {
+      return createHerdrClient(async (argv) => {
+        calls.push([...argv]);
+        if (argv[2] === "prompt") {
+          return {
+            ok: false,
+            code: 1,
+            stdout: "",
+            stderr: JSON.stringify({
+              error: {
+                code: "agent_prompt_stalled",
+                message:
+                  "agent prompt produced no observed working or blocked state within 5000 ms; current status is idle",
+              },
+            }),
+          };
+        }
+        if (argv[1] === "pane" && argv[2] === "read") {
+          return { ok: true, code: 0, stdout: pane, stderr: "" };
+        }
+        if (argv[2] === "wait" && calls.some((call) => call[2] === "prompt")) {
+          return {
+            ok: false,
+            code: 1,
+            stdout: JSON.stringify({ error: { code: "timeout", message: "timed out" } }),
+            stderr: "",
+          };
+        }
+        return { ok: true, code: 0, stdout: "w1:p9\n", stderr: "" };
+      });
+    }
+
+    it("matches a submitted prompt across TUI line wrapping, not an unsent draft", () => {
+      expect(opencodeShowsSubmittedPrompt(deliveredPane, handoff)).toBe(true);
+      expect(opencodeShowsSubmittedPrompt(draftPane, handoff)).toBe(false);
+      expect(opencodeShowsSubmittedPrompt(deliveredPane, "a different task")).toBe(false);
+      expect(opencodeShowsSubmittedPrompt(deliveredPane, "   ")).toBe(false);
+    });
+
+    it("matches a submitted prompt that itself contains the › glyph", () => {
+      const task = "Replace › with / in the breadcrumb separator, then › update the snapshot.";
+      const pane = ["▪ oc mini v2.2.6 · ~/code/repo", "", `› ${task}`, "", "Done.", "", "┃"].join(
+        "\n",
+      );
+      expect(opencodeShowsSubmittedPrompt(pane, task)).toBe(true);
+      expect(opencodeShowsSubmittedPrompt(`› › ${task}`, `› ${task}`)).toBe(true);
+      // A glyph mid-line in other output is not a submission marker.
+      expect(opencodeShowsSubmittedPrompt(`Home › ${task}`, task)).toBe(false);
+    });
+
+    it("treats a stalled OpenCode prompt as launched when the pane shows it submitted", async () => {
+      const calls: string[][] = [];
+      const result = await launchRoutedAgent({
+        env: { HERDR_ENV: "1" },
+        agent: "opencode",
+        launchName: "opencode-go/kimi-k3.1-pro",
+        effort: "none",
+        handoff,
+        dryRun: false,
+        herdr: stalledHerdr(deliveredPane, calls),
+      });
+      expect(result.ok).toBe(true);
+      expect(result.error).toBeUndefined();
+      expect(result.paneId).toBe("w1:p9");
+      expect(calls).toContainEqual([
+        "herdr",
+        "pane",
+        "read",
+        "w1:p9",
+        "--source",
+        "recent",
+        "--lines",
+        "400",
+        "--format",
+        "text",
+      ]);
+      // Idle OpenCode never turns "working", so do not spend 30s waiting for it.
+      const prompt = calls.findIndex((argv) => argv[2] === "prompt");
+      expect(calls.slice(prompt).some((argv) => argv[2] === "wait")).toBe(false);
+      expect(calls.filter((argv) => argv[2] === "prompt")).toHaveLength(1);
+    });
+
+    it("still reports a stalled OpenCode handoff that is only an unsent draft", async () => {
+      const calls: string[][] = [];
+      const result = await launchRoutedAgent({
+        env: { HERDR_ENV: "1" },
+        agent: "opencode",
+        launchName: "opencode-go/kimi-k3.1-pro",
+        effort: "none",
+        handoff,
+        dryRun: false,
+        herdr: stalledHerdr(draftPane, calls),
+      });
+      expect(result.ok).toBe(false);
+      expect(result.error).toMatch(/^handoff not received by agent router-opencode-/);
+      expect(calls.filter((argv) => argv[2] === "prompt")).toHaveLength(1);
+    });
+
+    it("does not read the pane for other agents' stalls", async () => {
+      const calls: string[][] = [];
+      const result = await launchRoutedAgent({
+        env: { HERDR_ENV: "1" },
+        agent: "codex",
+        launchName: "gpt-5.6-terra",
+        effort: "low",
+        handoff,
+        dryRun: false,
+        herdr: stalledHerdr(deliveredPane, calls),
+      });
+      expect(result.ok).toBe(false);
+      expect(calls.some((argv) => argv[1] === "pane" && argv[2] === "read")).toBe(false);
+    });
   });
 });

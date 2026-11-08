@@ -125,7 +125,7 @@ one entry per agent login:
 | Field                 | Values                                                                                       |
 | --------------------- | -------------------------------------------------------------------------------------------- |
 | `agent`               | `cursor`, `claude-code`, `codex`, `opencode`                                                 |
-| `provider`            | Matches the models: `cursor`, `anthropic`, `openai`                                          |
+| `provider`            | Matches the models: `cursor`, `anthropic`, `openai`, or your own (e.g. `opencode-go`)        |
 | `ownership`           | `personal`, or `shared` for a subscription other people also use (see below)                 |
 | `reserveFloor`        | Optional, 0 to 1. Shared accounts default to `0.40` and cannot go lower                      |
 | `collectorPreference` | Where usage comes from: `local-session`, `official-cli`, `official-api`, `browser-dashboard` |
@@ -153,7 +153,9 @@ The links follow whatever branch is checked out in this repo.
 ## Models
 
 Defined in `packages/router/config/models.json`. Add an ID to an account's `enabledModels` to
-use it.
+use it. To route a model the catalog does not ship (for example an OpenCode Go model such as
+Kimi K3.1 Pro), declare it under `models` in your own `config.json` instead of editing the
+plugin checkout; see "Example: OpenCode Go" in `docs/configuration.md`.
 
 | Model ID                  | Agent       | Starts as                                                        | Efforts                              | Quota pool |
 | ------------------------- | ----------- | ---------------------------------------------------------------- | ------------------------------------ | ---------- |
@@ -167,7 +169,7 @@ use it.
 | `openai:gpt-5.6-terra`    | Codex       | `codex --model gpt-5.6-terra …`                                  | low, medium, high, ultra             |            |
 | `openai:gpt-5.6-luna`     | Codex       | `codex --model gpt-5.6-luna …`                                   | low, medium, high                    |            |
 | `openai:gpt-5.5`          | Codex       | `codex --model gpt-5.5 …`                                        | low, medium, high                    |            |
-| `openai:opencode`         | OpenCode    | `opencode --model openai`                                        | low, medium, high                    |            |
+| `openai:opencode`         | OpenCode    | `opencode mini --model openai`                                   | low, medium, high                    |            |
 
 TypeSafe picks the effort from the model's list. `max` and `ultra` are only offered when the
 task you started the chain with (`router run` without `--session`) contains the word
@@ -268,7 +270,9 @@ available.
 `weekly_left` is the percent of weekly quota remaining (0–100), and `at` is Unix time in
 seconds. The router does not write this file.
 
-**OpenCode:** harness-only; quota belongs to the underlying provider.
+**OpenCode:** harness-only; quota belongs to the underlying provider. No OpenCode Go
+collector exists, so its usage is unknown: a personal account stays eligible, a shared one is
+excluded.
 
 ### Personal and shared accounts
 

@@ -2,6 +2,7 @@ import { chmodSync, existsSync, mkdirSync, readFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { AccountSchema } from "../domain/account.js";
+import type { ModelProfile } from "../domain/model-profile.js";
 import { ConfigFileSchema, type ConfiguredAccount } from "./config-schema.js";
 
 export interface LoadConfigOptions {
@@ -25,6 +26,8 @@ export interface AppConfig {
   liveEffort?: {
     enabled: boolean;
   };
+  /** User-declared model profiles from `config.json` `models`; merged over the built-in catalog. */
+  models: ModelProfile[];
 }
 
 export function resolveHome(env: NodeJS.Dict<string> = process.env): string {
@@ -73,6 +76,7 @@ export function loadConfig(options: LoadConfigOptions = {}): AppConfig {
     typesafe: file.typesafe,
     enrichment: file.enrichment,
     liveEffort: file.liveEffort,
+    models: file.models,
   };
 }
 

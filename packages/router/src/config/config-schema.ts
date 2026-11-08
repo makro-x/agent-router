@@ -62,6 +62,11 @@ export const ConfigFileSchema = z.object({
   enrichment: z.object({ enabled: z.boolean().default(true) }).optional(),
   /** In-place effort switching for Opus 5.5 and GPT 6 Astra panes. Opt-in. */
   liveEffort: z.object({ enabled: z.boolean().default(false) }).optional(),
+  /**
+   * Extra model profiles, same shape as config/models.json entries. They are added to the
+   * built-in catalog; an ID that is already built in, or listed twice, is an error.
+   */
+  models: z.array(ModelProfileSchema).default([]),
 });
 
 export const ModelCatalogSchema = z.object({

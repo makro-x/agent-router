@@ -56,6 +56,31 @@ export function herdrAgentName(agent: AgentId, launchToken: string): string {
 
 const HANDOFF_TIMEOUT_MS = 30_000;
 
+// Herdr never reports `opencode mini` as working, so a delivered prompt always looks stalled
+// and the agent is often idle again (turn finished) before any later wait. OpenCode echoes
+// each submitted prompt into its transcript as a line starting with "›" (an unsent draft sits
+// in the input box after "┃" instead), so that echo is the delivery signal for OpenCode.
+// Only a "›" at the start of a line marks a submission; one inside the prompt text is content.
+const OPENCODE_SUBMITTED_LINE = /^[ \t]*›/gm;
+const DELIVERY_PROBE_CHARS = 48;
+const DELIVERY_READ_LINES = 400;
+
+/** True when the pane transcript shows `handoff` as a submitted OpenCode prompt. */
+export function opencodeShowsSubmittedPrompt(paneText: string, handoff: string): boolean {
+  // Compare without whitespace: the TUI wraps and indents long prompts.
+  const probe = handoff.replace(/\s+/g, "").slice(0, DELIVERY_PROBE_CHARS);
+  if (!probe) {
+    return false;
+  }
+  for (const mark of paneText.matchAll(OPENCODE_SUBMITTED_LINE)) {
+    const echoed = paneText.slice(mark.index + mark[0].length).replace(/\s+/g, "");
+    if (echoed.startsWith(probe)) {
+      return true;
+    }
+  }
+  return false;
+}
+
 export interface LaunchResult {
   ok: boolean;
   error?: string;
@@ -163,6 +188,12 @@ export async function launchRoutedAgent(input: {
     // agent startup can miss even though it did receive the handoff. Confirm with a second
     // wait before calling the launch failed.
     if (output.includes("agent_prompt_stalled")) {
+      if (herdrAgentKind(input.agent) === "opencode") {
+        const pane = await herdr.readRecent(paneId, DELIVERY_READ_LINES);
+        if (pane.ok && opencodeShowsSubmittedPrompt(pane.stdout, input.handoff)) {
+          return { ok: true, paneCreated, printed, launchToken, paneId, agentName };
+        }
+      }
       const recovered = await herdr.waitFor({
         target: agentName,
         until: ["working", "blocked"],
