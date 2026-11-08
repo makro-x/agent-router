@@ -31,6 +31,8 @@ export interface HerdrClient {
     timeoutMs?: number;
   }): Promise<CommandResult>;
   closePane(paneId: string): Promise<CommandResult>;
+  /** Plain text of the pane's recent scrollback (`herdr pane read --source recent`). */
+  readRecent(paneId: string, lines: number): Promise<CommandResult>;
 }
 
 export function createProcessCommandAdapter(
@@ -124,6 +126,20 @@ export function createHerdrClient(runCommand: RunCommand): HerdrClient {
     },
     closePane(paneId) {
       return runCommand(["herdr", "pane", "close", paneId]);
+    },
+    readRecent(paneId, lines) {
+      return runCommand([
+        "herdr",
+        "pane",
+        "read",
+        paneId,
+        "--source",
+        "recent",
+        "--lines",
+        String(lines),
+        "--format",
+        "text",
+      ]);
     },
   };
 }
