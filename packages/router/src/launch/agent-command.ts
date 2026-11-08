@@ -33,7 +33,16 @@ export function buildAgentCommand(input: {
       return args;
     }
     case "codex": {
-      const args = ["codex", "--model", input.launchName];
+      // A routed pane is unattended: Codex's startup "Update available" menu would block it
+      // (Herdr reports agent_not_ready). This override applies to this launch only and leaves
+      // the user's ~/.codex/config.toml alone.
+      const args = [
+        "codex",
+        "--model",
+        input.launchName,
+        "-c",
+        "check_for_update_on_startup=false",
+      ];
       if (CODEX_EFFORTS.has(input.effort)) {
         args.push("-c", `model_reasoning_effort="${input.effort}"`);
       }
