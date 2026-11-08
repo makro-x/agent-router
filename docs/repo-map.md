@@ -60,7 +60,7 @@ Pipeline: load config → enrich task refs → collect quota → deterministic p
 | `config/`                                                             | config-schema, config-loader                                             | `config.example.json`, `.env`                          |
 | `catalog/`, `activity/`, `reservations/`, `handoff/`, `presentation/` |                                                                          | Supporting services                                    |
 
-Tests mirror `src/` in `packages/router/test/` (+ `e2e/`, `fixtures/`). Routing evals: `packages/router/evals/routing-cases.json`. Model catalog: `packages/router/config/models.json`.
+Tests mirror `src/` in `packages/router/test/` (+ `e2e/`, `fixtures/`). Routing evals: `packages/router/evals/routing-cases.json`. Model catalog: `packages/router/config/models.json`, plus user `models` from `config.json` (`catalog/model-catalog.ts` merges them). Example user config: `docs/examples/opencode-go.config.json`.
 
 ## Graphify-verified hubs (AST graph: 717 nodes, 1885 edges, 30 communities)
 

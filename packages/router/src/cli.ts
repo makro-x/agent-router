@@ -23,6 +23,7 @@ const NO_SESSIONS = "No router sessions yet. Sessions are recorded when `router 
 import { formatAccounts } from "./commands/accounts.js";
 import { usageRefresh } from "./commands/usage.js";
 import { loadConfig } from "./config/config-loader.js";
+import { loadEffectiveCatalog, unknownEnabledModels } from "./catalog/model-catalog.js";
 import { createDefaultRunDeps } from "./commands/runtime.js";
 import { formatError } from "./presentation/errors.js";
 import { formatAccountQuota } from "./presentation/quota.js";
@@ -331,7 +332,15 @@ export function createProgram(options: CliOptions = {}): Command & { exitCode?: 
   program.command("accounts").action(() => {
     try {
       const config = loadConfig({ env });
+      // Checks user models too: an ID clash with the built-in catalog fails here, not mid-run.
+      const catalog = loadEffectiveCatalog(config.models);
       stdout.write(`${formatAccounts(config.accounts)}\n`);
+      for (const missing of unknownEnabledModels(catalog, config.accounts)) {
+        stderr.write(
+          `warning: ${missing.accountId} enables "${missing.modelId}", which no built-in or ` +
+            "config.json model defines; it is never routed to.\n",
+        );
+      }
     } catch (error) {
       stderr.write(`${formatError(error)}\n`);
       program.exitCode = 1;

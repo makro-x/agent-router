@@ -11,6 +11,12 @@ and released under a single tag.
 
 ### Added
 
+- `models` in `config.json` declares extra model profiles, validated with the catalog
+  schema and added to the built-in catalog, so models such as OpenCode Go's Kimi K3.1 Pro
+  can be routed without editing `models.json` in the plugin checkout. A clash with a
+  built-in ID or a duplicate ID is an error; `router accounts` reports it and warns about
+  enabled model IDs that nothing defines. Example: `docs/examples/opencode-go.config.json`.
+
 - Live effort switching for Opus 5.5 and GPT 6 Astra, opt-in with `liveEffort.enabled`.
   `router run --session <id>` continues the next phase in the previous pane when TypeSafe
   picks the same account and model, changing the effort in place instead of opening a new

@@ -1,0 +1,32 @@
+{
+  "accounts": [
+    {
+      "id": "acct_opencode_go",
+      "label": "opencode go",
+      "provider": "opencode-go",
+      "agent": "opencode",
+      "ownership": "personal",
+      "collectorPreference": ["local-session"],
+      "enabledModels": ["opencode-go:kimi-k3.1-pro"],
+      "enabled": true
+    }
+  ],
+  "models": [
+    {
+      "id": "opencode-go:kimi-k3.1-pro",
+      "provider": "opencode-go",
+      "agent": "opencode",
+      "launchName": "opencode-go/kimi-k3.1-pro",
+      "supportedEfforts": ["none"],
+      "capabilities": {
+        "planning": 0.75,
+        "coding": 0.8,
+        "debugging": 0.75,
+        "creativity": 0.7,
+        "research": 0.7
+      },
+      "relativeQuotaCost": 0.5,
+      "relativeLatency": 1
+    }
+  ]
+}

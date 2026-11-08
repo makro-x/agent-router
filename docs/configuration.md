@@ -52,6 +52,65 @@ resolving pull request size through GitHub; `--no-enrich` disables it for one in
 reasoning effort of a running Opus 5.5 (`anthropic:claude-opus`) or GPT 6 Astra
 (`openai:gpt-6-astra`) pane instead of opening a new one; see "Live effort switching" in the
 README. When `false`, phases always open a new pane and `router effort` reports `disabled`.
+`models` (optional) declares extra model profiles in the same shape as the entries in
+`packages/router/config/models.json`, so a model the built-in catalog does not ship can be
+routed without editing the plugin checkout (which an update replaces). Each entry is
+validated with the catalog schema and added to the built-in catalog. An `id` that is already
+built in, or that appears twice in `models`, is an error naming the entry; `router accounts`
+reports it, and also warns when an account enables a model ID that nothing defines (such an
+ID is never routed to). User models only add; they cannot replace a built-in profile.
+
+### Example: OpenCode Go (Kimi K3.1 Pro)
+
+OpenCode Go models are data, not code: an `opencode` account plus a user model whose
+`launchName` is the `provider/model` name from `opencode models`. The full file is
+[`docs/examples/opencode-go.config.json`](examples/opencode-go.config.json):
+
+```json
+{
+  "accounts": [
+    {
+      "id": "acct_opencode_go",
+      "label": "opencode go",
+      "provider": "opencode-go",
+      "agent": "opencode",
+      "ownership": "personal",
+      "collectorPreference": ["local-session"],
+      "enabledModels": ["opencode-go:kimi-k3.1-pro"],
+      "enabled": true
+    }
+  ],
+  "models": [
+    {
+      "id": "opencode-go:kimi-k3.1-pro",
+      "provider": "opencode-go",
+      "agent": "opencode",
+      "launchName": "opencode-go/kimi-k3.1-pro",
+      "supportedEfforts": ["none"],
+      "capabilities": {
+        "planning": 0.75,
+        "coding": 0.8,
+        "debugging": 0.75,
+        "creativity": 0.7,
+        "research": 0.7
+      },
+      "relativeQuotaCost": 0.5,
+      "relativeLatency": 1
+    }
+  ]
+}
+```
+
+- The router starts it as `opencode --model opencode-go/kimi-k3.1-pro`. Log in to OpenCode Go
+  with `opencode auth login` first; the router stores no OpenCode credential.
+- `supportedEfforts` is `["none"]` because the OpenCode TUI has no effort flag.
+- `capabilities`, `relativeQuotaCost` and `relativeLatency` are estimates; adjust them.
+- Usage: no OpenCode Go collector exists, so usage is `unknown` (source `none`), which is not
+  an error. A `personal` account stays eligible and is ranked as if its quota were full
+  (projected remaining `1.0`), so TypeSafe weighs it on capabilities and cost. A `shared`
+  account with unknown usage is excluded (`unknown-usage`), as for every provider. Merge
+  other models into the same `models` array the same way.
+
 `MODEL_ROUTER_COORDINATOR_URL` overrides the file URL.
 Coordinator URLs must use HTTPS; HTTP is accepted only for `localhost`, `127.0.0.1`, or
 `[::1]` during local development.

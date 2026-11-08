@@ -1,6 +1,6 @@
 import { execFileSync } from "node:child_process";
 import path from "node:path";
-import { loadModelCatalog } from "../catalog/model-catalog.js";
+import { loadEffectiveCatalog } from "../catalog/model-catalog.js";
 import { loadConfig } from "../config/config-loader.js";
 import type { RunDeps } from "./run.js";
 import type { Account } from "../domain/account.js";
@@ -160,7 +160,7 @@ export async function createDefaultRunDeps(
   overrides: RuntimeOverrides = {},
 ): Promise<RunDeps> {
   const config = loadConfig({ env });
-  const catalog = loadModelCatalog();
+  const catalog = loadEffectiveCatalog(config.models);
   const resolveCollectors =
     overrides.collectorsForAccount ??
     ((account: Account) =>
